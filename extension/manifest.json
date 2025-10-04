@@ -1,0 +1,24 @@
+{
+  "manifest_version": 3,
+  "name": "YouTubeGist Ext",
+  "version": "0.1.0",
+  "description": "在观看 YouTube 视频时快速打开对应的 YouTubeGist 页面。",
+  "permissions": ["tabs", "storage"],
+  "host_permissions": [
+    "https://www.youtube.com/*",
+    "https://m.youtube.com/*",
+    "https://www.youtubegist.com/*"
+  ],
+  "action": {
+    "default_title": "YouTubeGist",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://www.youtube.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
