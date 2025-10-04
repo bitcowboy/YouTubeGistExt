@@ -77,8 +77,10 @@
 }
 
 #ygist-status {
-  font-size: 13px;
+  font-size: 12px;
   line-height: 1.4;
   color: #cbd5f5;
   text-align: center;
 }
+
+/* 注意：由于跨域限制，无法直接通过CSS修改iframe内部样式 */
