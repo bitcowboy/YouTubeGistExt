@@ -60,20 +60,18 @@
 
 #ygist-frame-shell {
   position: relative;
-  height: 480px;
+  height: 480px; /* 默认高度，会被JavaScript动态覆盖 */
   border-radius: 8px;
   overflow: hidden;
   background: #0f1113;
 }
 
 #ygist-frame {
-  width: 125%;
-  height: 1100px;
+  width: 100%;
+  height: 100%;
   border: none;
   display: block;
-  transform: scale(0.8);
   transform-origin: top left;
-  margin-top: -360px;
 }
 
 #ygist-status {

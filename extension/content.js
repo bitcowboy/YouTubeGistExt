@@ -1,4 +1,4 @@
-const GIST_BASE_URL = "https://www.youtubegist.com/watch?v="; // TODO: 若站点路径不同，可在此调整
+const GIST_BASE_URL = "https://host.996007.fun:4173/watch?v="; // TODO: 若站点路径不同，可在此调整
 const PANEL_ID = "ygist-panel";
 const PANEL_HIDDEN_CLASS = "ygist-hidden";
 const PANEL_COLLAPSED_CLASS = "ygist-collapsed";
@@ -16,6 +16,7 @@ let statusEl;
 let locationCheckTimer;
 let mountCheckTimer;
 let embedStatusTimer;
+let resizeObserver;
 let isExpanded = true;
 
 (function init() {
@@ -84,6 +85,10 @@ function clearTimers() {
   if (embedStatusTimer) {
     window.clearTimeout(embedStatusTimer);
     embedStatusTimer = undefined;
+  }
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = undefined;
   }
 }
 
@@ -183,6 +188,10 @@ function showPanel() {
   if (isExpanded) {
     panelEl.classList.add(PANEL_EXPANDED_CLASS);
     panelEl.classList.remove(PANEL_COLLAPSED_CLASS);
+    // 设置初始高度
+    updateIframeHeight();
+    // 设置ResizeObserver来监听播放器大小变化
+    setupResizeObserver();
   } else {
     panelEl.classList.add(PANEL_COLLAPSED_CLASS);
     panelEl.classList.remove(PANEL_EXPANDED_CLASS);
@@ -272,6 +281,66 @@ function extractYouTubeVideoId(rawUrl) {
   return null;
 }
 
+function getYouTubePlayerHeight() {
+  // 尝试多种选择器来找到YouTube视频播放器
+  const selectors = [
+    '#movie_player',
+    '#player',
+    'ytd-player #movie_player',
+    'ytd-player #player',
+    '.html5-video-player',
+    'video'
+  ];
+
+  for (const selector of selectors) {
+    const element = document.querySelector(selector);
+    if (element && element.offsetHeight > 0) {
+      return element.offsetHeight;
+    }
+  }
+
+  // 如果找不到播放器，返回默认高度
+  return 480;
+}
+
+function updateIframeHeight() {
+  if (!iframeEl) {
+    return;
+  }
+
+  const playerHeight = getYouTubePlayerHeight() - 50; // 减去50像素偏移
+  const frameShell = document.getElementById('ygist-frame-shell');
+  
+  if (frameShell) {
+    frameShell.style.height = `${playerHeight}px`;
+  }
+}
+
+function setupResizeObserver() {
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+  }
+
+  // 观察YouTube播放器区域的变化
+  const playerSelectors = [
+    '#movie_player',
+    '#player',
+    'ytd-player',
+    '#primary'
+  ];
+
+  for (const selector of playerSelectors) {
+    const element = document.querySelector(selector);
+    if (element) {
+      resizeObserver = new ResizeObserver(() => {
+        updateIframeHeight();
+      });
+      resizeObserver.observe(element);
+      break;
+    }
+  }
+}
+
 function expandPanel() {
   if (!panelEl) {
     return;
@@ -282,6 +351,9 @@ function expandPanel() {
   panelEl.classList.remove(PANEL_COLLAPSED_CLASS);
   toggleBtnEl.setAttribute("aria-expanded", "true");
   persistPanelState();
+  // 设置高度和ResizeObserver
+  updateIframeHeight();
+  setupResizeObserver();
   loadCurrentVideo();
 }
 
@@ -295,6 +367,11 @@ function collapsePanel() {
   panelEl.classList.remove(PANEL_EXPANDED_CLASS);
   toggleBtnEl.setAttribute("aria-expanded", "false");
   persistPanelState();
+  // 清理ResizeObserver
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = undefined;
+  }
   clearEmbed();
   setStatus("");
 }
