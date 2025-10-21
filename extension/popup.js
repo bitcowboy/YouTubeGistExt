@@ -1,33 +1,53 @@
-const GIST_BASE_URL = "https://www.youtubegist.com/watch?v="; // TODO: 按实际的 youtubegist 页面路径调整
+const LOCAL_DEBUG_STORAGE_KEY = "youtubegist_local_debug";
 
 const statusEl = document.getElementById("status");
-const linkEl = document.getElementById("gist-link");
+const localDebugCheckbox = document.getElementById("local-debug");
 
 init().catch((error) => {
   console.error(error);
-  setStatus("加载扩展时出错，请重试。" + (error?.message ? `\n${error.message}` : ""));
+  setStatus("加载设置时出错，请重试。" + (error?.message ? `\n${error.message}` : ""));
 });
 
 async function init() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  // 加载保存的设置
+  await loadSettings();
+  
+  // 监听复选框变化
+  localDebugCheckbox.addEventListener("change", handleLocalDebugChange);
+}
 
-  if (!tab || !tab.url) {
-    setStatus("未找到当前标签页信息。");
-    return;
+async function loadSettings() {
+  try {
+    const result = await chrome.storage.local.get([LOCAL_DEBUG_STORAGE_KEY]);
+    const isLocalDebug = result[LOCAL_DEBUG_STORAGE_KEY] || false;
+    localDebugCheckbox.checked = isLocalDebug;
+  } catch (error) {
+    console.warn("读取设置失败:", error);
+    setStatus("读取设置失败，使用默认配置。");
   }
+}
 
-  const videoId = extractYouTubeVideoId(tab.url);
-
-  if (!videoId) {
-    setStatus("请在 YouTube 视频页面中使用此扩展。");
-    return;
+async function handleLocalDebugChange() {
+  const isLocalDebug = localDebugCheckbox.checked;
+  
+  try {
+    await chrome.storage.local.set({ [LOCAL_DEBUG_STORAGE_KEY]: isLocalDebug });
+    setStatus("设置已保存");
+    
+    // 通知content script更新URL
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (tab && tab.url && tab.url.includes("youtube.com")) {
+      chrome.tabs.sendMessage(tab.id, { 
+        type: "UPDATE_BASE_URL", 
+        isLocalDebug: isLocalDebug 
+      }).catch(() => {
+        // content script可能还没加载，忽略错误
+      });
+    }
+  } catch (error) {
+    console.error("保存设置失败:", error);
+    setStatus("保存设置失败，请重试。");
   }
-
-  const gistUrl = `${GIST_BASE_URL}${videoId}`;
-  linkEl.href = gistUrl;
-  linkEl.textContent = "打开对应的 YouTubeGist 页面";
-  linkEl.classList.remove("hidden");
-  setStatus("");
 }
 
 function setStatus(message) {
@@ -39,28 +59,4 @@ function setStatus(message) {
 
   statusEl.textContent = message;
   statusEl.classList.remove("hidden");
-}
-
-function extractYouTubeVideoId(rawUrl) {
-  try {
-    const url = new URL(rawUrl);
-    const host = url.hostname.replace(/^www\./, "");
-
-    if (host === "youtube.com" || host === "m.youtube.com") {
-      return url.searchParams.get("v");
-    }
-
-    if (host === "youtu.be") {
-      return url.pathname.slice(1) || null;
-    }
-
-    if (host === "youtube-nocookie.com") {
-      const embedMatch = url.pathname.match(/\/embed\/([\w-]{11})/);
-      return embedMatch ? embedMatch[1] : null;
-    }
-  } catch (error) {
-    console.warn("无法解析当前链接", error);
-  }
-
-  return null;
 }

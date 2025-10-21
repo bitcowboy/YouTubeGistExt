@@ -1,4 +1,8 @@
-const GIST_BASE_URL = "https://host.996007.fun:4173/watch?v="; // TODO: 若站点路径不同，可在此调整
+const LOCAL_DEBUG_STORAGE_KEY = "youtubegist_local_debug";
+const REMOTE_BASE_URL = "https://host.996007.fun:4173/watch?v=";
+const LOCAL_BASE_URL = "https://localhost:5173/watch?v=";
+
+let GIST_BASE_URL = REMOTE_BASE_URL; // 默认使用远程服务器
 const PANEL_ID = "ygist-panel";
 const PANEL_HIDDEN_CLASS = "ygist-hidden";
 const PANEL_COLLAPSED_CLASS = "ygist-collapsed";
@@ -46,6 +50,17 @@ let isExpanded = true;
     window.addEventListener("beforeunload", () => {
       clearTimers();
     });
+
+    // 监听来自popup的消息
+    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+      if (message.type === "UPDATE_BASE_URL") {
+        GIST_BASE_URL = message.isLocalDebug ? LOCAL_BASE_URL : REMOTE_BASE_URL;
+        // 如果当前有视频在加载，重新加载
+        if (currentVideoId && isExpanded) {
+          loadCurrentVideo();
+        }
+      }
+    });
   };
 
   const startWhenReady = () => {
@@ -57,14 +72,22 @@ let isExpanded = true;
   };
 
   if (HAS_CHROME_STORAGE) {
-    chrome.storage.local.get({ [PANEL_STATE_STORAGE_KEY]: isExpanded }, (result) => {
+    // 读取面板状态和local debug设置
+    chrome.storage.local.get({ 
+      [PANEL_STATE_STORAGE_KEY]: isExpanded,
+      [LOCAL_DEBUG_STORAGE_KEY]: false 
+    }, (result) => {
       if (!chrome.runtime || !chrome.runtime.lastError) {
         const stored = result ? result[PANEL_STATE_STORAGE_KEY] : undefined;
         if (typeof stored === "boolean") {
           isExpanded = stored;
         }
+        
+        // 更新GIST_BASE_URL
+        const isLocalDebug = result[LOCAL_DEBUG_STORAGE_KEY] || false;
+        GIST_BASE_URL = isLocalDebug ? LOCAL_BASE_URL : REMOTE_BASE_URL;
       } else {
-        console.warn("YouTubeGist: 读取面板状态失败", chrome.runtime.lastError);
+        console.warn("YouTubeGist: 读取设置失败", chrome.runtime.lastError);
       }
       startWhenReady();
     });

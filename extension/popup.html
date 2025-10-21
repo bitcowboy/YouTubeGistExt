@@ -2,18 +2,23 @@
 <html lang="zh">
   <head>
     <meta charset="utf-8" />
-    <title>YouTubeGist 快捷链接</title>
+    <title>YouTubeGist 设置</title>
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
     <main id="content">
-      <p id="status" class="message">正在检测当前页面...</p>
-      <a
-        id="gist-link"
-        class="hidden"
-        target="_blank"
-        rel="noopener noreferrer"
-      ></a>
+      <h1>YouTubeGist 设置</h1>
+      <div class="setting-item">
+        <label class="checkbox-label">
+          <input type="checkbox" id="local-debug" />
+          <span class="checkmark"></span>
+          <span class="label-text">Local Debug</span>
+        </label>
+        <p class="setting-description">
+          选中时使用本地调试服务器 (localhost:5173)，否则使用远程服务器 (host.996007.fun:4173)
+        </p>
+      </div>
+      <div id="status" class="message hidden"></div>
     </main>
     <script src="popup.js" type="module"></script>
   </body>
